@@ -33,19 +33,18 @@ bot.on("ready", async () => {
 bot.on("interactionCreate", async (interaction) => {
     if (interaction instanceof Eris.CommandInteraction) {
         if (interaction.data.name === "docs") {
-            console.log(interaction.data.options)
-            let term = interaction.data.options[0].value.toLowerCase()
-            let ping = interaction.data.options[1]?.value
-            let page = await collectTerms()
-            page = await page.find(termTemp => termTemp["key"].toLowerCase() === term)
+            let term = interaction.data.options[0].value.toLowerCase() // Grab the term to look up
+            let ping = interaction.data.options[1]?.value // Grab the user to ping, if any
+            let page = await collectTerms() // Grab the pages
+            page = await page.find(termTemp => termTemp["key"].toLowerCase() === term) // Find the page that matches the term
             if (!page) {
-                interaction.createMessage("Page not found.")
+                interaction.createMessage("Page not found.") // If the page doesn't exist, send an error message
                 return;
             }
             if (ping) {
-                interaction.createMessage(`<@!${ping}>: ${page.page}`)
+                interaction.createMessage(`<@!${ping}>: ${page.page}`) // If the user to ping exists, ping them and send the page
             } else {
-                interaction.createMessage(`${page.page}`)
+                interaction.createMessage(`${page.page}`) // If the user to ping doesn't exist, just send the page
             }
         }
     }
