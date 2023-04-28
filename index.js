@@ -1,6 +1,5 @@
 require("dotenv").config();
 const Eris = require("eris");
-const yaml = require('js-yaml');
 const YAML = require('yaml')
 const axios = require('axios')
 
