@@ -29,55 +29,45 @@ bot.on("ready", async () => {
     console.log("Ready!");
 });
 
+
+function flattenDict(dict, result={}) {
+    for (const key in dict) {
+        if (typeof dict[key] === 'object') {
+            if (isNaN(key) && dict[key][0]['Index']) {
+                result[key.toLowerCase()] = dict[key][0]['Index'];
+            }
+
+            flattenDict(dict[key], result);
+        } else {
+            result[key.toLowerCase()] = dict[key];
+        }
+    }
+    return result;
+}
+
+
 bot.on("interactionCreate", async (interaction) => {
     if (interaction instanceof Eris.CommandInteraction) {
-        if (interaction.data.name === "docs") {
-            let term = interaction.data.options[0].value.toLowerCase() // Grab the term to look up
-            let ping = interaction.data.options[1]?.value // Grab the user to ping, if any
-            let page = await collectTerms() // Grab the pages
-            page = await page.find(termTemp => termTemp["key"].toLowerCase() === term) // Find the page that matches the term
-            if (!page) {
-                interaction.createMessage("Page not found.") // If the page doesn't exist, send an error message
-                return;
+        if (interaction.data.name === 'docs') {
+            let term = interaction.data.options[0].value.toLowerCase(); // Grab the term to look up
+            let ping = interaction.data.options[1]?.value; // Grab the user to ping, if any
+
+            const rawDocs = await axios.get('https://raw.githubusercontent.com/Atlas-OS/docs/master/mkdocs.yml');
+            const parsedDocs = await YAML.parse(rawDocs.data, { logLevel : 'error' }); 
+            const result = flattenDict(parsedDocs.nav);
+            let docsFound = result[term];
+
+            if (!docsFound) {
+                return await interaction.createMessage("Page not found.");
             }
-            if (ping) {
-                interaction.createMessage(`<@!${ping}>: ${page.page}`) // If the user to ping exists, ping them and send the page
-            } else {
-                interaction.createMessage(`${page.page}`) // If the user to ping doesn't exist, just send the page
-            }
+
+            docsFound = `https://docs.atlasos.net/${docsFound
+                .replace('index.md', '')
+                .replace('.md', '')
+            }`
+            await interaction.createMessage(ping ? `<@${ping}> ${docsFound}`: docsFound)
         }
     }
 });
-
-
-async function collectTerms() {
-    let terms = await axios.get("https://raw.githubusercontent.com/Atlas-OS/docs/master/mkdocs.yml") // Get the mkdocs.yml file
-    terms = YAML.parse(terms.data.replace("!!python/name:materialx.emoji.twemoji", "").replace("!!python/name:materialx.emoji.to_svg", "")).nav // Parse the YAML file to grab the nav element
-    terms = YAML.stringify(terms) // Stringify the YAML file after grabbing the nav section
-    while (terms.includes("- ")){
-        terms = terms.replace("- ", "") // While the terms include a dash, remove it, it's easier to format this way
-    }
-    while (terms.includes("    ")){
-        terms = terms.replace("    ", "") // While the terms include indents, remove them so that every item is on a new flat line
-    }
-    while (terms.includes(":\n")){
-        terms = terms.replace(":\n", `: ${terms.split(":\n")[1].split("\n")[0].split(": ")[1]}\n`) // While the terms don't have a link provided to them, grab one from the line below it and remove the part explaining what it is
-    }
-    terms = terms.split("\n") // Split the terms into an array by line
-    keys = [] // Create an empty array to store the keys
-    for (let index of terms) {
-        if(index.includes("Index")) continue; // If the index includes the word Index, skip it
-        if(index === "") continue; // If the index is empty, skip it
-        if(index === " ") continue; // If the index is a space, skip it
-        if(!index.includes("https://")){ // If the index doesn't include https://, it's a link, not a document page
-            let page = "https://docs.atlasos.net/" + index.split(": ")[1].replace("/index.md", "").replace("index.md").replace(".md", "") + "/" // Make the page into a link
-            if(page === "https://docs.atlasos.net/undefined/") page = "https://docs.atlasos.net/" // If one of the parts of the string is "undefined", it is the home page. Don't know why this happens.
-            keys = [...keys, { key: index.split(": ")[0], page: page }] // Add the key and page to the keys array
-        } else { // If it is a link
-            keys = [...keys, { key: index.split(": ")[0], page: index.split(": ")[1] }] // Add the key and page to the keys array if it is a link already
-        }
-    }
-    return keys; // Send the keys array back
-}
 
 bot.connect();
