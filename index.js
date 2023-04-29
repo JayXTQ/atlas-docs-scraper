@@ -61,10 +61,10 @@ bot.on("interactionCreate", async (interaction) => {
                 return await interaction.createMessage("Page not found.");
             }
 
-            docsFound = `https://docs.atlasos.net/${docsFound
+            docsFound = !docsFound.includes("https://") ? `https://docs.atlasos.net/${docsFound
                 .replace('index.md', '')
                 .replace('.md', '')
-            }`
+            }` : docsFound;
             await interaction.createMessage(ping ? `<@${ping}> ${docsFound}`: docsFound)
         }
     }
